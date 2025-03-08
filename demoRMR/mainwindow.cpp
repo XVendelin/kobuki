@@ -145,6 +145,7 @@ int i;
 float r;
 void MainWindow::on_pushButton_2_clicked() //forward
 {
+    //tu bude rampa
     i+=100;
     _robot.setSpeed(i,r);
 
