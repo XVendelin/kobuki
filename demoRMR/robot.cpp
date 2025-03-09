@@ -76,7 +76,7 @@ int robot::processThisRobot(TKobukiData robotdata)
     const double TICKS_PER_REV = 52.0;  // Encoder ticks per revolution
     const double TWO_PI = 2 * M_PI;     // Constant for full revolution
     const int MAX_ENCODER_VALUE = 65536; // Adjust for your encoder type
-    const double DT = 0.1; // Fixed time step (adjust if needed)
+    const double DT = 0.02; // Fixed time step (adjust if needed)
 
     // Compute wheel displacements (difference in encoder ticks)
     int deltaRight = robotdata.EncoderRight - prevEncoderRight;
