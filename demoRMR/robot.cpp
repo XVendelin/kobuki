@@ -59,7 +59,10 @@ int robot::processThisRobot(TKobukiData robotdata)
 
 
     ///tu mozete robit s datami z robota
-    /// // If this is the first time running, just store encoder values
+#define DEG_TO_RAD (M_PI / 180.0)  // Convert degrees to radians
+#define RAD_TO_DEG (180.0 / M_PI)  // Convert radians to degrees
+
+    // If this is the first run, store encoder values and exit
     if (firstRun) {
         prevEncoderRight = robotdata.EncoderRight;
         prevEncoderLeft = robotdata.EncoderLeft;
@@ -67,35 +70,64 @@ int robot::processThisRobot(TKobukiData robotdata)
         return 0;
     }
 
-    // Constants for odometry calculations
-    const double WHEEL_RADIUS = 0.035;   // Wheel radius in meters
-    const double WHEEL_BASE = 0.23;      // Distance between left and right wheels
-    const double TICKS_PER_REV = 651.898;// Encoder ticks per wheel revolution
-    const double DISTANCE_PER_TICK = (2 * M_PI * WHEEL_RADIUS) / TICKS_PER_REV; // Meters per tick
+    // Constants
+    const double WHEEL_RADIUS = 0.035;  // 35 mm
+    const double WHEEL_BASE = 0.23;     // 230 mm
+    const double TICKS_PER_REV = 52.0;  // Encoder ticks per revolution
+    const double TWO_PI = 2 * M_PI;     // Constant for full revolution
+    const int MAX_ENCODER_VALUE = 65536; // Adjust for your encoder type
+    const double DT = 0.1; // Fixed time step (adjust if needed)
 
     // Compute wheel displacements (difference in encoder ticks)
     int deltaRight = robotdata.EncoderRight - prevEncoderRight;
     int deltaLeft = robotdata.EncoderLeft - prevEncoderLeft;
 
-    // Update previous encoder values
+    // Handle encoder wrap-around (assumes 16-bit encoder, adjust if needed)
+    if (deltaRight > MAX_ENCODER_VALUE / 2) deltaRight -= MAX_ENCODER_VALUE;
+    if (deltaRight < -MAX_ENCODER_VALUE / 2) deltaRight += MAX_ENCODER_VALUE;
+    if (deltaLeft > MAX_ENCODER_VALUE / 2) deltaLeft -= MAX_ENCODER_VALUE;
+    if (deltaLeft < -MAX_ENCODER_VALUE / 2) deltaLeft += MAX_ENCODER_VALUE;
+
+    // Store previous encoder values
     prevEncoderRight = robotdata.EncoderRight;
     prevEncoderLeft = robotdata.EncoderLeft;
 
-    // Convert encoder ticks to meters traveled
-    double dRight = deltaRight * DISTANCE_PER_TICK;
-    double dLeft = deltaLeft * DISTANCE_PER_TICK;
+    // Convert encoder ticks to wheel rotation (radians)
+    double omegaRight = (deltaRight / TICKS_PER_REV) * TWO_PI;  // Now in radians
+    double omegaLeft = (deltaLeft / TICKS_PER_REV) * TWO_PI;    // Now in radians
 
-    // Compute change in robot's pose
-    double dCenter = (dRight + dLeft) / 2.0;  // Forward movement
-    double dTheta = (dRight - dLeft) / WHEEL_BASE; // Rotation change
+    // Compute linear and angular velocity
+    double v = ((omegaLeft + omegaRight) * WHEEL_RADIUS) / 2.0;
+    double omega = ((omegaRight - omegaLeft) * WHEEL_RADIUS) / WHEEL_BASE; // Ensure correct sign
 
-    // Update global position using simple odometry equations
-    x += dCenter * cos(fi);
-    y += dCenter * sin(fi);
-    fi += dTheta; // Update orientation
+    // Convert `fi` to radians if it was stored in degrees
+    bool fiInDegrees = true;  // Set to true if `fi` is originally in degrees
+    if (fiInDegrees) {
+        fi *= DEG_TO_RAD;  // Convert degrees to radians
+    }
 
-    // Normalize angle between -π and π
-    fi = atan2(sin(fi), cos(fi));
+    // Compute new orientation
+    double newFi = fi + omega * DT;
+
+    // Compute new position using differential drive equations
+    if (fabs(omega) > 1e-6) { // Robot is turning
+        double R = v / omega; // Turning radius
+        x += R * (sin(newFi) - sin(fi));
+        y -= R * (cos(newFi) - cos(fi));
+    } else { // Robot is moving straight
+        x += v * DT * cos(fi);
+        y += v * DT * sin(fi);
+    }
+
+    // Update orientation and normalize to [-π, π]
+    fi = atan2(sin(newFi), cos(newFi));  // Keeps angle within [-π, π]
+
+    // Convert `fi` back to degrees if needed
+    if (fiInDegrees) {
+        fi *= RAD_TO_DEG;
+    }
+
+
 
 
 
