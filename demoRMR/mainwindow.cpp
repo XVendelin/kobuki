@@ -146,14 +146,14 @@ float r;
 void MainWindow::on_pushButton_2_clicked() //forward
 {
     //tu bude rampa
-    _robot.moveToGoal(0,3);
+    _robot.moveToGoal(1,0);
 
 }
 
 void MainWindow::on_pushButton_3_clicked() //back
 {
     i-=100;
-    _robot.moveToGoal(1.5,3);
+    _robot.moveToGoal(0,0);
 
 }
 

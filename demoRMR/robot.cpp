@@ -135,37 +135,57 @@ int robot::processThisRobot(TKobukiData robotdata)
 
     // Update orientation and normalize to [-π, π]
     fi = atan2(sin(newFi), cos(newFi));  // Keeps angle within [-π, π]
-
     // Convert `fi` back to degrees if needed
     if (fiInDegrees) {
         fi *= RAD_TO_DEG;
     }
 
     if (movingToGoal) {
-        double targetAngle = atan2(targetY - y, targetX - x);
-        targetAngle*=RAD_TO_DEG;
+        double targetAngle = atan2(targetY - y, targetX - x) * RAD_TO_DEG;
         double errorAngle = targetAngle - fi;
+
+        // Normalize errorAngle to [-180, 180] to always take the shortest turn
+        errorAngle = fmod(errorAngle + 180, 360);
+        if (errorAngle < 0) errorAngle += 360;
+        errorAngle -= 180;
+
         double distance = std::hypot(targetX - x, targetY - y);
 
         double Kp_angle = 0.1;  // Adjust as needed
         double Kp_position = 500;
         double tolerance_angle = 0.1;  // Small threshold for angle alignment
-        double tolerance_pos = 0.05;   // Stop threshold (meters)
+        double tolerance_pos = 0.01;   // Stop threshold (meters)
 
         double angular_speed = Kp_angle * errorAngle;
         double linear_speed = Kp_position * distance;
 
+        // **Reverse Logic: Move backward if turning more than 90° is needed**
+        //if (fabs(errorAngle) > 90) {
+        //    errorAngle = errorAngle > 0 ? errorAngle - 180 : errorAngle + 180;
+        //    linear_speed = -linear_speed;  // Reverse movement
+        //}
+
+        // Limit speeds
+        if (angular_speed > 0.05) angular_speed = 0.05;
+        else if (angular_speed < 0.03 && angular_speed > 0) angular_speed = 0.03;
+
+        if (linear_speed > 300) linear_speed = 300;
+        else if (linear_speed < 3 && linear_speed > 0) linear_speed = 3;
+
+        // Control movement
         if (fabs(errorAngle) > tolerance_angle) {
             setSpeed(0, angular_speed);  // Rotate towards goal
         }
         else if (distance > tolerance_pos) {
-            setSpeed(linear_speed, 0);  // Move forward
+            setSpeed(linear_speed, 0);  // Move forward or backward
         }
         else {
             setSpeed(0, 0);  // Stop when close enough
             movingToGoal = false;  // Goal reached
         }
     }
+
+
 
 
 
