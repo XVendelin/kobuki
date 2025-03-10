@@ -1,14 +1,17 @@
 #include "robot.h"
+#include <cmath>
+
+
 
 robot::robot(QObject *parent) : QObject(parent)
 {
     qRegisterMetaType<LaserMeasurement>("LaserMeasurement");
     #ifndef DISABLE_OPENCV
     qRegisterMetaType<cv::Mat>("cv::Mat");
-#endif
-#ifndef DISABLE_SKELETON
-qRegisterMetaType<skeleton>("skeleton");
-#endif
+    #endif
+    #ifndef DISABLE_SKELETON
+    qRegisterMetaType<skeleton>("skeleton");
+    #endif
 }
 
 void robot::initAndStartRobot(std::string ipaddress)
@@ -32,6 +35,7 @@ void robot::initAndStartRobot(std::string ipaddress)
 
 }
 
+
 void robot::setSpeedVal(double forw, double rots)
 {
     forwardspeed=forw;
@@ -54,6 +58,16 @@ void robot::setSpeed(double forw, double rots)
 
 ///toto je calback na data z robota, ktory ste podhodili robotu vo funkcii initAndStartRobot
 /// vola sa vzdy ked dojdu nove data z robota. nemusite nic riesit, proste sa to stane
+
+bool movingToGoal;
+float targetY, targetX;
+
+void robot::moveToGoal(double goal_x, double goal_y) {
+    targetX = goal_x;
+    targetY = goal_y;
+    movingToGoal = true;  // Flag to activate movement
+}
+
 int robot::processThisRobot(TKobukiData robotdata)
 {
 
@@ -127,7 +141,31 @@ int robot::processThisRobot(TKobukiData robotdata)
         fi *= RAD_TO_DEG;
     }
 
+    if (movingToGoal) {
+        double targetAngle = atan2(targetY - y, targetX - x);
+        targetAngle*=RAD_TO_DEG;
+        double errorAngle = targetAngle - fi;
+        double distance = std::hypot(targetX - x, targetY - y);
 
+        double Kp_angle = 0.1;  // Adjust as needed
+        double Kp_position = 500;
+        double tolerance_angle = 0.1;  // Small threshold for angle alignment
+        double tolerance_pos = 0.05;   // Stop threshold (meters)
+
+        double angular_speed = Kp_angle * errorAngle;
+        double linear_speed = Kp_position * distance;
+
+        if (fabs(errorAngle) > tolerance_angle) {
+            setSpeed(0, angular_speed);  // Rotate towards goal
+        }
+        else if (distance > tolerance_pos) {
+            setSpeed(linear_speed, 0);  // Move forward
+        }
+        else {
+            setSpeed(0, 0);  // Stop when close enough
+            movingToGoal = false;  // Goal reached
+        }
+    }
 
 
 
