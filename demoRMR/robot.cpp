@@ -73,8 +73,10 @@ int robot::processThisRobot(TKobukiData robotdata)
 
 
     ///tu mozete robit s datami z robota
-#define DEG_TO_RAD (M_PI / 180.0)  // Convert degrees to radians
-#define RAD_TO_DEG (180.0 / M_PI)  // Convert radians to degrees
+    #define DEG_TO_RAD (M_PI / 180.0)  // Convert degrees to radians
+    #define RAD_TO_DEG (180.0 / M_PI)  // Convert radians to degrees
+    double max_ot=1, min_ot=0.3, max_s=500, min_s=10;
+
 
     // If this is the first run, store encoder values and exit
     if (firstRun) {
@@ -160,17 +162,23 @@ int robot::processThisRobot(TKobukiData robotdata)
         double linear_speed = Kp_position * distance;
 
         // **Reverse Logic: Move backward if turning more than 90° is needed**
-        //if (fabs(errorAngle) > 90) {
-        //    errorAngle = errorAngle > 0 ? errorAngle - 180 : errorAngle + 180;
-        //    linear_speed = -linear_speed;  // Reverse movement
-        //}
+        if (fabs(errorAngle) > 90) {
+            if (errorAngle>90) errorAngle-=180;
+            else errorAngle+=180;
+            angular_speed = Kp_angle * errorAngle;
+            linear_speed = -linear_speed;  // Reverse movement
+        }
 
         // Limit speeds
-        if (angular_speed > 0.05) angular_speed = 0.05;
-        else if (angular_speed < 0.03 && angular_speed > 0) angular_speed = 0.03;
+        if (angular_speed > max_ot) angular_speed = max_ot;
+        else if (angular_speed < min_ot && angular_speed > 0) angular_speed = min_ot;
+        if (angular_speed < -max_ot) angular_speed = -max_ot;
+        else if (angular_speed < -min_ot && angular_speed < 0) angular_speed = -min_ot;
 
-        if (linear_speed > 300) linear_speed = 300;
-        else if (linear_speed < 3 && linear_speed > 0) linear_speed = 3;
+        if (linear_speed > max_s) linear_speed = max_s;
+        else if (linear_speed < min_s && linear_speed > 0) linear_speed = min_s;
+        if (linear_speed < -max_s) linear_speed = -max_s;
+        else if (linear_speed > -min_s && linear_speed < 0) linear_speed = -min_s;
 
         // Control movement
         if (fabs(errorAngle) > tolerance_angle) {
