@@ -75,7 +75,7 @@ int robot::processThisRobot(TKobukiData robotdata)
     ///tu mozete robit s datami z robota
     #define DEG_TO_RAD (M_PI / 180.0)  // Convert degrees to radians
     #define RAD_TO_DEG (180.0 / M_PI)  // Convert radians to degrees
-    double max_ot=1, min_ot=0.3, max_s=500, min_s=10;
+    double max_ot=1.5, min_ot=1, max_s=500, min_s=10;
 
 
     // If this is the first run, store encoder values and exit
@@ -153,9 +153,9 @@ int robot::processThisRobot(TKobukiData robotdata)
 
         double distance = std::hypot(targetX - x, targetY - y);
 
-        double Kp_angle = 0.1;  // Adjust as needed
-        double Kp_position = 500;
-        double tolerance_angle = 0.1;  // Small threshold for angle alignment
+        double Kp_angle = 0.2;  // Adjust as needed
+        double Kp_position = 100;
+        double tolerance_angle = 1;  // Small threshold for angle alignment
         double tolerance_pos = 0.01;   // Stop threshold (meters)
 
         double angular_speed = Kp_angle * errorAngle;
