@@ -172,7 +172,7 @@ void MainWindow::on_pushButton_5_clicked()//right
 void MainWindow::on_pushButton_4_clicked() //stop
 {
     r=0;
-    _robot.setSpeed(i,r);
+    _robot.moveToGoal(0.02,0);
 
 }
 
