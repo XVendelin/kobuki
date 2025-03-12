@@ -75,7 +75,7 @@ int robot::processThisRobot(TKobukiData robotdata)
     ///tu mozete robit s datami z robota
     #define DEG_TO_RAD (M_PI / 180.0)  // Convert degrees to radians
     #define RAD_TO_DEG (180.0 / M_PI)  // Convert radians to degrees
-    double max_ot=1.5, min_ot=0.3, max_s=500, min_s=3;
+    double max_ot=1.5, min_ot=0.3, max_s=500, min_s=30;
 
 
     // If this is the first run, store encoder values and exit
@@ -156,10 +156,14 @@ int robot::processThisRobot(TKobukiData robotdata)
         double Kp_angle = 0.2;  // Adjust as needed
         double Kp_position = 300;
         double tolerance_angle = 1;  // Small threshold for angle alignment
-        double tolerance_pos = 0.01;   // Stop threshold (meters)
+        double tolerance_pos = 0.05;   // Stop threshold (meters)
 
         double angular_speed = Kp_angle * errorAngle;
         double linear_speed = Kp_position * distance;
+
+        if(distance > 1) tolerance_angle = 10;
+        else if(distance < 1 && 0.5 > distance) tolerance_angle = 5;
+        else tolerance_angle = 1;
 
         // **Reverse Logic: Move backward if turning more than 90° is needed**
         if (fabs(errorAngle) > 90) {
@@ -181,8 +185,8 @@ int robot::processThisRobot(TKobukiData robotdata)
         else if (linear_speed > -min_s && linear_speed < 0) linear_speed = -min_s;
 
         // Define acceleration and deceleration rates
-        double acceleration_linear = 3;   // How fast it speeds up
-        double deceleration_linear = 3;   // How fast it slows down
+        double acceleration_linear = 10;   // How fast it speeds up
+        double deceleration_linear = 10;   // How fast it slows down
 
         double acceleration_angular = 0.1;  // Angular acceleration
         double deceleration_angular = 0.1;  // Angular deceleration
