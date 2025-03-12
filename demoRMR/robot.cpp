@@ -75,7 +75,7 @@ int robot::processThisRobot(TKobukiData robotdata)
     ///tu mozete robit s datami z robota
     #define DEG_TO_RAD (M_PI / 180.0)  // Convert degrees to radians
     #define RAD_TO_DEG (180.0 / M_PI)  // Convert radians to degrees
-    double max_ot=1.5, min_ot=0.5, max_s=500, min_s=10;
+    double max_ot=1.5, min_ot=0.3, max_s=500, min_s=1;
 
 
     // If this is the first run, store encoder values and exit
@@ -181,17 +181,26 @@ int robot::processThisRobot(TKobukiData robotdata)
         else if (linear_speed > -min_s && linear_speed < 0) linear_speed = -min_s;
 
         // Define acceleration and deceleration rates
-        double acceleration_linear = 5;   // How fast it speeds up
-        double deceleration_linear = 5;   // How fast it slows down
+        double acceleration_linear = 1;   // How fast it speeds up
+        double deceleration_linear = 1;   // How fast it slows down
 
         double acceleration_angular = 0.05;  // Angular acceleration
-        double deceleration_angular = 0.05;  // Angular deceleration
+        double deceleration_angular = 0.1;  // Angular deceleration
 
         static double current_linear_speed = 0;
         static double current_angular_speed = 0;
 
         if (fabs(errorAngle) > tolerance_angle) {
             // Angular speed ramp-up & ramp-down
+            if (current_linear_speed < linear_speed) {
+                current_linear_speed += acceleration_linear;
+                if (current_linear_speed > linear_speed) current_linear_speed = linear_speed;
+            } else {
+                current_linear_speed -= deceleration_linear;
+                if (current_linear_speed < linear_speed) current_linear_speed = linear_speed;
+            }
+
+            setSpeed(current_linear_speed, 0);  // Move forward or backward
             if (current_angular_speed < angular_speed) {
                 current_angular_speed += acceleration_angular;
                 if (current_angular_speed > angular_speed) current_angular_speed = angular_speed;
@@ -215,17 +224,6 @@ int robot::processThisRobot(TKobukiData robotdata)
             setSpeed(current_linear_speed, 0);  // Move forward or backward
         }
         else {
-            // Stop smoothly
-            if (current_linear_speed > 0) {
-                current_linear_speed -= deceleration_linear;
-                if (current_linear_speed < 0) current_linear_speed = 0;
-            }
-
-            if (current_angular_speed > 0) {
-                current_angular_speed -= deceleration_angular;
-                if (current_angular_speed < 0) current_angular_speed = 0;
-            }
-
             setSpeed(0, 0);  // Stop completely
             movingToGoal = false;  // Goal reached
         }

@@ -165,8 +165,7 @@ void MainWindow::on_pushButton_6_clicked() //left
 
 void MainWindow::on_pushButton_5_clicked()//right
 {
-    r=-3.14159/8;
-    _robot.setSpeed(i,r);
+    _robot.moveToGoal(0,0);
 
 }
 
