@@ -61,6 +61,9 @@ void robot::setSpeed(double forw, double rots)
 
 bool movingToGoal;
 float targetY, targetX;
+bool distance_scan = false; // ak false, tak sa zistí celkova vzdialenosť, ktoru ma robot prejst
+float distance_all;//celkova vzdialenost
+
 
 void robot::moveToGoal(double goal_x, double goal_y) {
     targetX = goal_x;
@@ -151,19 +154,38 @@ int robot::processThisRobot(TKobukiData robotdata)
         if (errorAngle < 0) errorAngle += 360;
         errorAngle -= 180;
 
+
         double distance = std::hypot(targetX - x, targetY - y);
+
+        if (distance_scan == false){
+            distance_all = std::hypot(targetX - x, targetY - y);
+            std::cout << "Hello, World!" << std::endl;
+            distance_scan = true;
+        }
+        //double distance = std::hypot(targetX - x, targetY - y);
 
         double Kp_angle = 0.2;  // Adjust as needed
         double Kp_position = 300;
-        double tolerance_angle = 1;  // Small threshold for angle alignment
+        double tolerance_angle;  // Small threshold for angle alignment
         double tolerance_pos = 0.05;   // Stop threshold (meters)
 
         double angular_speed = Kp_angle * errorAngle;
         double linear_speed = Kp_position * distance;
 
-        if(distance > 1) tolerance_angle = 10;
-        else if(distance < 1 && 0.5 > distance) tolerance_angle = 5;
+        //tolerancia uhlov
+
+        std::cout << "Dis: " <<distance<< std::endl;
+
+        if ((distance > (0.95)*distance_all)) tolerance_angle = 1;
+        else if ((distance <= (0.95)*distance_all)&&(distance > (0.10)*distance_all)) tolerance_angle = 5;
         else tolerance_angle = 1;
+    std::cout << "tolerance: " <<tolerance_angle<< std::endl;
+
+        //if (distance>0.5 && distance<2) tolerance_angle = 45;
+        //else tolerance_angle = 1;
+        //tolerancia uhlov
+
+
 
         // **Reverse Logic: Move backward if turning more than 90° is needed**
         if (fabs(errorAngle) > 90) {
@@ -235,6 +257,7 @@ int robot::processThisRobot(TKobukiData robotdata)
         else {
             setSpeed(0, 0);  // Stop completely
             movingToGoal = false;  // Goal reached
+            distance_scan = false; // aby mohol zase skenovat pre zadanau vzdialenost
         }
     }
 
