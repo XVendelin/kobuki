@@ -78,7 +78,7 @@ int robot::processThisRobot(TKobukiData robotdata)
     ///tu mozete robit s datami z robota
     #define DEG_TO_RAD (M_PI / 180.0)  // Convert degrees to radians
     #define RAD_TO_DEG (180.0 / M_PI)  // Convert radians to degrees
-    double max_ot=1.5, min_ot=0.3, max_s=500, min_s=30;
+    double max_ot=1, min_ot=0.3, max_s=500, min_s=30;
 
 
     // If this is the first run, store encoder values and exit
@@ -92,10 +92,9 @@ int robot::processThisRobot(TKobukiData robotdata)
     // Constants
     const double WHEEL_RADIUS = 0.035;  // 35 mm
     const double WHEEL_BASE = 0.23;     // 230 mm
-    const double TICKS_PER_REV = 52.0;  // Encoder ticks per revolution
+    const double TICKS_PER_REV = 52.0*49.5833;  // Encoder ticks per revolution
     const double TWO_PI = 2 * M_PI;     // Constant for full revolution
     const int MAX_ENCODER_VALUE = 65536; // Adjust for your encoder type
-    const double DT = 0.02; // Fixed time step (adjust if needed)
 
     // Compute wheel displacements (difference in encoder ticks)
     int deltaRight = robotdata.EncoderRight - prevEncoderRight;
@@ -126,7 +125,7 @@ int robot::processThisRobot(TKobukiData robotdata)
     }
 
     // Compute new orientation
-    double newFi = fi + omega * DT;
+    double newFi = fi + omega;
 
     // Compute new position using differential drive equations
     if (fabs(omega) > 1e-6) { // Robot is turning
@@ -134,8 +133,8 @@ int robot::processThisRobot(TKobukiData robotdata)
         x += R * (sin(newFi) - sin(fi));
         y -= R * (cos(newFi) - cos(fi));
     } else { // Robot is moving straight
-        x += v * DT * cos(fi);
-        y += v * DT * sin(fi);
+        x += v * cos(fi);
+        y += v * sin(fi);
     }
 
     // Update orientation and normalize to [-π, π]
