@@ -20,14 +20,40 @@ Q_DECLARE_METATYPE(cv::Mat)
 Q_DECLARE_METATYPE(skeleton)
 #endif
 Q_DECLARE_METATYPE(LaserMeasurement)
+struct Point {int x, y;}; ////tu som dal strukturu Point
+
+
 class robot : public QObject
 {
     Q_OBJECT
 public:
     explicit robot(QObject *parent = nullptr);
-
     void initAndStartRobot(std::string ipaddress);
-
+    // Funkcia na interpoláciu pozície
+    double interpolatePosition(double value, double timestamp);
+    // Funkcie na získanie predchádzajúcich a nasledujúcich hodnôt a časových značiek
+    double getPreviousValue(double value, double timestamp);
+    double getNextValue(double value, double timestamp);
+    double getPreviousTimestamp(double timestamp);
+    double getNextTimestamp(double timestamp);
+    double getPreviousValueFromHistory(int index, double timestamp);
+    double getNextValueFromHistory(int index, double timestamp);
+    double interpolateX(double timestamp);
+    double interpolateY(double timestamp);
+    double interpolateFi(double timestamp);
+    std::array<double, 3> interpol(uint32_t Lid_TS);
+    double interpol_X(uint32_t Lid_TS);
+    double interpol_Y(uint32_t Lid_TS);
+    double interpol_Fi(uint32_t Lid_TS);
+    void vypisMapy();
+    void saveMapToFile(const std::string &filename);
+    void saveFilledMap(const std::string &filename);
+    void openSavedMap(const std::string &filename);
+    std::vector<std::vector<int>> gradualFill(std::vector<std::vector<int>> map, Point start, Point goal);
+    std::vector<Point> findpath(const std::vector<std::vector<int>>& matrix, Point start, Point end);
+    std::vector<Point> r_checkpoint(const std::vector<Point>& points);
+    std::vector<Point> volaj_findpath(Point start, Point goal);
+    /****************Sem pridať funkcie ************************/ //nové
     //tato funkcia len nastavuje hodnoty.. posielaju sa v callbacku(dobre, kvoli asynchronnosti a zabezpeceniu,ze sa poslu len raz pri viacero prepisoch vramci callu)
     void setSpeedVal(double forw,double rots);
     //tato funkcia fyzicky posiela hodnoty do robota

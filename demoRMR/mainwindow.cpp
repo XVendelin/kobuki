@@ -17,7 +17,7 @@ MainWindow::MainWindow(QWidget *parent) :
 {
 
     //tu je napevno nastavena ip. treba zmenit na to co ste si zadali do text boxu alebo nejaku inu pevnu. co bude spravna
-    ipaddress="127.0.0.1";//"192.168.1.13" toto je na niektory realny robot.. na lokal budete davat "127.0.0.1"
+    ipaddress="127.0.0.1";//"192.168.1.14" toto je na niektory realny robot.. na lokal budete davat "127.0.0.1"
 
     ui->setupUi(this);
     datacounter=0;
@@ -141,38 +141,107 @@ void MainWindow::on_pushButton_9_clicked() //start button
     }
     );
 }
-int i;
+int i = 0;
 float r;
+int bod = 0;
+std::vector<Point> body_prechodu;
+
 void MainWindow::on_pushButton_2_clicked() //forward
 {
-    _robot.moveToGoal(0,3);
+    switch(bod) {
+    case 1:
+        _robot.moveToGoal(5,4);
+        break;
+    case 2:
+        _robot.moveToGoal(3,4);
+        break;
+    case 3:
+        _robot.moveToGoal(3,1.8);
+        break;
+    case 4:
+        _robot.moveToGoal(2,1.8);
+        break;
+    case 5:
+        _robot.moveToGoal(3,1.8);
+        break;
+    case 6:
+        _robot.moveToGoal(3,-1);
+        break;
+    case 7:
+        _robot.moveToGoal(1,-1);
+        break;
+    case 8:
+        _robot.moveToGoal(3,-1);
+        break;
+    case 9:
+        _robot.moveToGoal(3,1);
+        break;
+    case 10:
+        _robot.moveToGoal(5,1);
+        break;
+    case 11:
+        _robot.moveToGoal(5,2.5);
+        break;
+    case 12:
+        _robot.moveToGoal(5,-1);
+        break;
+    default:
+        _robot.moveToGoal(0,3.5);
+        break;
+    }
+    bod = bod + 1;
+   // i=100;
+   // _robot.setSpeed(i,0);
 
 }
 
 void MainWindow::on_pushButton_3_clicked() //back
 {
-    i-=100;
-    _robot.moveToGoal(1,3);
-
+    //i-=100;
+    //_robot.moveToGoal(1,3);
+    _robot.vypisMapy();
+    _robot.saveMapToFile("C:\\Users\\petri\\OneDrive\\Desktop\\RMR\\ROBOT_3\\kobuki\\mapa.txt");
+    std::cout << "Mapa ulozena do suboru map.txt" << std::endl;  ;
 }
 
 void MainWindow::on_pushButton_6_clicked() //left
 {
-    r=3.14159/8;
-    _robot.moveToGoal(1,4);
-
+  //  r=3.14159/8;
+    //_robot.moveToGoal(0,0.1);
+   // r = M_PI/16;
+  //_robot.setSpeed(0,r);
+    _robot.openSavedMap("C:\\Users\\petri\\OneDrive\\Desktop\\RMR\\ROBOT_3\\kobuki\\mapa.txt");
 }
 
-void MainWindow::on_pushButton_5_clicked()//right
+void MainWindow::on_pushButton_5_clicked()//right////fill
 {
-    _robot.moveToGoal(0,0);
+    //_robot.moveToGoal(0,0);
+    //_robot.moveToGoal(2,3);
+   // r = -M_PI/16;
+   // _robot.setSpeed(0,r);
+    Point start = {0,0};
+    Point goal = {-1,3};
+    start.x = 10 * (start.x) + 50;
+    start.y = 10 * (start.y) + 10;
+    goal.x = -10 * (goal.x) + 50;
+    goal.y = 10 * (goal.y) + 10;
 
+    body_prechodu=_robot.volaj_findpath(start, goal);
 }
 
 void MainWindow::on_pushButton_4_clicked() //stop
 {
-    r=0;
-    _robot.moveToGoal(0.2,0);
+    //r=0;
+    //i = 0;
+    //_robot.setSpeed(i,r);
+
+    //_robot.moveToGoal(3.5,0);
+    float bod_x= 5-(static_cast<float>(body_prechodu[i].x))/10;
+    float bod_y= (static_cast<float>(body_prechodu[i].y))/10 - 1;
+    std::cout<<body_prechodu[i].y<<", "<<body_prechodu[i].x<<endl;
+    std::cout<<bod_y<<", "<<bod_x<<endl;
+    _robot.moveToGoal(bod_y,bod_x);
+    i++;
 
 }
 
