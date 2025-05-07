@@ -32,6 +32,9 @@ public:
     void setSpeedVal(double forw,double rots);
     //tato funkcia fyzicky posiela hodnoty do robota
     void setSpeed(double forw,double rots);
+    void moveToGoal(double goal_x, double goal_y);
+    void moveToGoalLogic(double max_ot, double min_ot, double max_s, double min_s);
+    void obstacleAvoidance(double max_ot, double min_ot, double max_s, double min_s);
 signals:
     void publishPosition(double x, double y, double z);
     void publishLidar(const LaserMeasurement &lidata);
