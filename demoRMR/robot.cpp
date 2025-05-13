@@ -1,4 +1,4 @@
- #include "robot.h"
+#include "robot.h"
 #include <cmath>
 #include <iostream>
 #include <queue>
@@ -111,6 +111,7 @@ int robot::processThisRobot(TKobukiData robotdata)
     if (firstRun) {
         prevEncoderRight = robotdata.EncoderRight;
         prevEncoderLeft = robotdata.EncoderLeft;
+        prevEncoderGyro = robotdata.GyroAngle/100;//data z gyra
         firstRun = false;
         return 0;
     }
@@ -125,6 +126,10 @@ int robot::processThisRobot(TKobukiData robotdata)
     // Compute wheel displacements (difference in encoder ticks)
     int deltaRight = robotdata.EncoderRight - prevEncoderRight;
     int deltaLeft = robotdata.EncoderLeft - prevEncoderLeft;
+    double gyroFi = robotdata.GyroAngle/100 - prevEncoderGyro;
+    //std::cout << "gyro uhol: "<<gyroFi <<endl;
+    double gyroFi_RAD = gyroFi * DEG_TO_RAD;
+    //std::cout << "gyro uhol RAD: "<< gyroFi_RAD << endl;
 
     // Handle encoder wrap-around (assumes 16-bit encoder, adjust if needed)
     if (deltaRight > MAX_ENCODER_VALUE / 2) deltaRight -= MAX_ENCODER_VALUE;
@@ -135,6 +140,7 @@ int robot::processThisRobot(TKobukiData robotdata)
     // Store previous encoder values
     prevEncoderRight = robotdata.EncoderRight;
     prevEncoderLeft = robotdata.EncoderLeft;
+    prevEncoderGyro = robotdata.GyroAngle/100;
 
     // Convert encoder ticks to wheel rotation (radians)
     double omegaRight = (deltaRight / TICKS_PER_REV) * TWO_PI;  // Now in radians
@@ -142,14 +148,15 @@ int robot::processThisRobot(TKobukiData robotdata)
 
     // Compute linear and angular velocity
     double v = ((omegaLeft + omegaRight) * WHEEL_RADIUS) / 2.0;
-    double omega = ((omegaRight - omegaLeft) * WHEEL_RADIUS) / WHEEL_BASE; // Ensure correct sign
+    //double omega = ((omegaRight - omegaLeft) * WHEEL_RADIUS) / WHEEL_BASE;
+    double omega = gyroFi_RAD;
+// Ensure correct sign
 
     // Convert `fi` to radians if it was stored in degrees
     bool fiInDegrees = true;  // Set to true if `fi` is originally in degrees
     if (fiInDegrees) {
         fi *= DEG_TO_RAD;  // Convert degrees to radians
     }
-
     // Compute new orientation
     double newFi = fi + omega;
 
@@ -165,6 +172,7 @@ int robot::processThisRobot(TKobukiData robotdata)
 
     // Update orientation and normalize to [-π, π]
     fi = atan2(sin(newFi), cos(newFi));  // Keeps angle within [-π, π]
+    //std::cout <<"NFi " << newFi <<", FI "<< fi <<endl;
     // Convert `fi` back to degrees if needed
     if (fiInDegrees) {
         fi *= RAD_TO_DEG;
@@ -203,8 +211,8 @@ int robot::processThisRobot(TKobukiData robotdata)
 
        // std::cout << "Dis: " <<distance<< std::endl;
 
-        if ((distance > (0.95)*distance_all)) tolerance_angle = 1;
-        else if ((distance <= (0.95)*distance_all)&&(distance > (0.10)*distance_all)) tolerance_angle = 5;
+        if ((distance > (0.99)*distance_all)) tolerance_angle = 1;
+        else if ((distance <= (0.99)*distance_all)&&(distance > (0.05)*distance_all)) tolerance_angle = 10;
         else tolerance_angle = 1;
     //std::cout << "tolerance: " <<tolerance_angle<< std::endl;
 
@@ -415,8 +423,9 @@ int robot::processThisLidar(LaserMeasurement laserData){
             //std::cout <<"  int_X:"<< interpolated_x << "  vzdialnost*cos(glob):" << vzdialenost_lid * cos(global_angle) << "  celkove:" << interpolated_x + vzdialenost_lid * cos(global_angle)  << "  X do mapy:" << mapX_int  <<  " \n";
             // Kontrola, či sú súradnice v rozsahu mapy
             if (mapX_int >= 0 && mapX_int < MAP_WIDTH && mapY_int >= 0 && mapY_int < MAP_HEIGHT) {
-                if (Mapa[mapY_int][mapX_int] == 0 && rotacia == 0) {
-                    Mapa[mapY_int][mapX_int] = 1;
+                //if (Mapa[mapY_int][mapX_int] == 0 && rotacia == 0) {
+                if (rotacia == 0){
+                    Mapa[mapY_int][mapX_int] += 1;
                    // std::cout << mapX_int << " " << mapY_int;
                 }
             }
@@ -534,7 +543,7 @@ std::array<double, 3> robot::interpol(uint32_t Lid_TS) {
 void robot::vypisMapy(){
     for (int i = 0; i < 120; ++i) {
         for (int j = 0; j < 100; ++j) {
-            if (Mapa[i][j] == 0)
+            if (Mapa[i][j] < 10)
                 std::cout << " " << " ";
             else if (Mapa[i][j] == 2)
                 std::cout << "+" << " ";
@@ -628,7 +637,7 @@ void robot::saveFilledMap(const std::string &filename) {
     }
 }*/
 
-void robot::openSavedMap(const std::string &filename) {
+/*void robot::openSavedMap(const std::string &filename) {
     std::ifstream file(filename); // otvorí súbor na čítanie
     if (!file) {
         std::cerr << "Error opening file!" << std::endl;
@@ -682,7 +691,93 @@ void robot::openSavedMap(const std::string &filename) {
         }
         std::cout << std::endl;
     }
+}*/
+void robot::openSavedMap(const std::string &filename) {
+    std::ifstream file(filename);
+    if (!file) {
+        std::cerr << "Error opening file!" << std::endl;
+        return;
+    }
+
+    map_na_fill.clear();
+
+    std::string line;
+    std::vector<std::vector<int>> temp_map;
+
+    // 1. Načítanie a binarizácia
+    while (std::getline(file, line)) {
+        std::vector<int> row;
+        std::stringstream ss(line);
+        int value;
+
+        while (ss >> value) {
+            row.push_back(value >= 10 ? 1 : 0);  // >=10 → 1, inak 0 //ternárny operator
+        }
+
+        temp_map.push_back(row);
+    }
+
+    file.close();
+
+    // 2. Spracovanie zľava a sprava
+    for (auto& row : temp_map) {
+        // Sprava
+        bool foundRightOne = false;
+        for (int i = static_cast<int>(row.size()) - 1; i >= 0; --i) {
+            if (!foundRightOne && row[i] == 1) {
+                foundRightOne = true;
+            }
+            if (!foundRightOne && row[i] == 0) {
+                row[i] = 1;
+            }
+        }
+
+        // Zľava
+        bool foundLeftOne = false;
+        for (int i = 0; i < row.size(); ++i) {
+            if (!foundLeftOne && row[i] == 1) {
+                foundLeftOne = true;
+            }
+            if (!foundLeftOne && row[i] == 0) {
+                row[i] = 1;
+            }
+        }
+    }
+
+    // 3. Rozšírenie jednotiek do okolia (vzdialenosť 2 = 5x5 blok)
+    int rows = temp_map.size();
+    int cols = rows > 0 ? temp_map[0].size() : 0;
+    std::vector<std::vector<int>> expanded_map = temp_map;
+
+    const int spread = 2; // vzdialenosť rozšírenia
+
+    for (int y = 0; y < rows; ++y) {
+        for (int x = 0; x < cols; ++x) {
+            if (temp_map[y][x] == 1) {
+                for (int dy = -spread; dy <= spread; ++dy) {
+                    for (int dx = -spread; dx <= spread; ++dx) {
+                        int ny = y + dy;
+                        int nx = x + dx;
+                        if (ny >= 0 && ny < rows && nx >= 0 && nx < cols) {
+                            expanded_map[ny][nx] = 1;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    map_na_fill = expanded_map;
+
+    // Výpis (voliteľné)
+    for (const auto &row : map_na_fill) {
+        for (int val : row) {
+            std::cout << val << " ";
+        }
+        std::cout << std::endl;
+    }
 }
+
 
 
 ////zadanie 4

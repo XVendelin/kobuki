@@ -77,6 +77,7 @@ private:
     bool firstRun=true;
     short prevEncoderRight;
     short prevEncoderLeft;
+    double prevEncoderGyro;
 ///-----------------------------
 /// toto su rychlosti ktore sa nastavuju setSpeedVal a posielaju v processThisRobot
     double forwardspeed;//mm/s

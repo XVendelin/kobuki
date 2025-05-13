@@ -17,7 +17,7 @@ MainWindow::MainWindow(QWidget *parent) :
 {
 
     //tu je napevno nastavena ip. treba zmenit na to co ste si zadali do text boxu alebo nejaku inu pevnu. co bude spravna
-    ipaddress="127.0.0.1";//"192.168.1.14" toto je na niektory realny robot.. na lokal budete davat "127.0.0.1"
+    ipaddress="192.168.1.12";//"192.168.1.14" toto je na niektory realny robot.. na lokal budete davat "127.0.0.1"
 
     ui->setupUi(this);
     datacounter=0;
@@ -155,36 +155,36 @@ void MainWindow::on_pushButton_2_clicked() //forward
     case 2:
         _robot.moveToGoal(3,4);
         break;
-    case 3:
-        _robot.moveToGoal(3,1.8);
-        break;
+    //case 3:
+        //_robot.moveToGoal(3,1.8);
+      /*  break;
     case 4:
-        _robot.moveToGoal(2,1.8);
+        //_robot.moveToGoal(2,1.8);
         break;
     case 5:
-        _robot.moveToGoal(3,1.8);
-        break;
-    case 6:
+        //_robot.moveToGoal(3,1.8);
+        break;*/
+    case 3:
         _robot.moveToGoal(3,-1);
         break;
-    case 7:
+    case 4:
         _robot.moveToGoal(1,-1);
         break;
-    case 8:
+    case 5:
         _robot.moveToGoal(3,-1);
         break;
-    case 9:
+    case 6:
         _robot.moveToGoal(3,1);
         break;
-    case 10:
+    /*case 7:
         _robot.moveToGoal(5,1);
         break;
-    case 11:
+    case 8:
         _robot.moveToGoal(5,2.5);
         break;
-    case 12:
-        _robot.moveToGoal(5,-1);
-        break;
+    case 9:
+        //_robot.moveToGoal(5,-1);
+        break;*/
     default:
         _robot.moveToGoal(0,3.5);
         break;
@@ -223,8 +223,8 @@ void MainWindow::on_pushButton_5_clicked()//right////fill
     Point goal = {-1,3};
     start.x = 10 * (start.x) + 50;
     start.y = 10 * (start.y) + 10;
-    goal.x = -10 * (goal.x) + 50;
-    goal.y = 10 * (goal.y) + 10;
+    goal.x = -10 * (-0.5) + 50;
+    goal.y = 10 * (2.87) + 10;
 
     body_prechodu=_robot.volaj_findpath(start, goal);
 }
