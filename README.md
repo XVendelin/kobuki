@@ -1,35 +1,35 @@
 # ČASŤ 1. ODOMETRIA
 
-V prvej časti bolo potrebné naprogramovať odometriu robota a základný pohyb k nastavenému cieľu. [cite: 1]
+V prvej časti bolo potrebné naprogramovať odometriu robota a základný pohyb k nastavenému cieľu. 
 
-Pôvodne sme v kóde využívali odometriu z koliesok robota, ale po problémoch s inými časťami zadania sme sa rozhodli pre využitie gyroskopu. [cite: 2]
+Pôvodne sme v kóde využívali odometriu z koliesok robota, ale po problémoch s inými časťami zadania sme sa rozhodli pre využitie gyroskopu. 
 
-Kód využíva dáta z enkodérov a gyroskopu robota na odhad jeho aktuálnej pozície a orientácie. [cite: 3]
+Kód využíva dáta z enkodérov a gyroskopu robota na odhad jeho aktuálnej pozície a orientácie. 
 
-Tieto dáta sú poskytované užívateľovi priamo v ovládacom paneli robota (viď Obrázok 1). Cieľ, ku ktorému sa robot presúva, sa nastaví tlačidlom (Pri mapovaní je to tlačidlo „Mapovanie“ a pri prechádzaní mapy je to tlačidlo „Ďalší bod“). [cite: 4]
+Tieto dáta sú poskytované užívateľovi priamo v ovládacom paneli robota (viď Obrázok 1). Cieľ, ku ktorému sa robot presúva, sa nastaví tlačidlom (Pri mapovaní je to tlačidlo „Mapovanie“ a pri prechádzaní mapy je to tlačidlo „Ďalší bod“). 
 
 ![image](https://github.com/user-attachments/assets/1cf938ca-d955-4c71-9484-fa72ba9fd143)
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*Obr. 1. Tlačidlá na ovládanie a zobrazenie dát o polohe robota* [cite: 5]
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*Obr. 1. Tlačidlá na ovládanie a zobrazenie dát o polohe robota* 
 ## Metódy
 
 ### `void robot::moveToGoal(double goal_x, double goal_y)`
 
-* Nastaví cieľové súradnice `targetX` a `targetY` pre robot. [cite: 5]
-* Nastaví `movingToGoal` na `true`, čím aktivuje logiku pohybu k cieľu v metóde `processThisRobot`. [cite: 6]
-* Resetuje `distance_scan` na `false`, aby sa pri prvom behu s novým cieľom prepočítala celková vzdialenosť. [cite: 7]
+* Nastaví cieľové súradnice `targetX` a `targetY` pre robot. 
+* Nastaví `movingToGoal` na `true`, čím aktivuje logiku pohybu k cieľu v metóde `processThisRobot`. 
+* Resetuje `distance_scan` na `false`, aby sa pri prvom behu s novým cieľom prepočítala celková vzdialenosť. 
 
 ### `int robot::processThisRobot(TKobukiData robotdata)`
 
-Toto je callback funkcia, ktorá sa volá vždy, keď prídu nové dáta z robota (enkodéry, gyroskop atď.). [cite: 8] Implementuje hlavnú logiku odometrie a navigácie k cieľu. [cite: 9]
+Toto je callback funkcia, ktorá sa volá vždy, keď prídu nové dáta z robota (enkodéry, gyroskop atď.). [cite: 8] Implementuje hlavnú logiku odometrie a navigácie k cieľu.
 
 #### Inicializácia:
 
-Pri prvom spustení (`firstRun == true`) uloží aktuálne hodnoty enkodérov (`EncoderRight`, `EncoderLeft`) a gyroskopu (`GyroAngle`) do predošlých hodnôt a nastaví `firstRun` na `false`. [cite: 9]
+Pri prvom spustení (`firstRun == true`) uloží aktuálne hodnoty enkodérov (`EncoderRight`, `EncoderLeft`) a gyroskopu (`GyroAngle`) do predošlých hodnôt a nastaví `firstRun` na `false`. 
 
 #### Konštanty:
 
-Definuje konštanty súvisiace s geometriou robota a enkodérmi: [cite: 10]
+Definuje konštanty súvisiace s geometriou robota a enkodérmi: 
 
 * `WHEEL_RADIUS`: Polomer kolesa. [cite: 10]
 * `WHEEL_BASE`: Rozchod kolies. [cite: 10]
