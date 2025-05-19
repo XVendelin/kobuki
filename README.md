@@ -10,7 +10,7 @@ Tieto dáta sú poskytované užívateľovi priamo v ovládacom paneli robota (v
 
 ![image](https://github.com/user-attachments/assets/1cf938ca-d955-4c71-9484-fa72ba9fd143)
 
-              *Obr. 1. Tlačidlá na ovládanie a zobrazenie dát o polohe robota* [cite: 5]
+>> *Obr. 1. Tlačidlá na ovládanie a zobrazenie dát o polohe robota* [cite: 5]
 
 ## Metódy
 
