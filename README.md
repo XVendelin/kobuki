@@ -1,11 +1,10 @@
 # ČASŤ 1. ODOMETRIA
 
-V prvej časti bolo potrebné naprogramovať odometriu robota a základný pohyb k nastavenému cieľu. Pôvodne sme 
-v kóde využívali odometriu z koliesok robota, ale po problémoch s inými časťami zadania sme sa rozhodli pre
-využitie gyroskopu. Kód využíva dáta z enkodérov a gyroskopu robota na odhad jeho aktuálnej pozície 
-a orientácie. Tieto dáta sú poskytované užívateľovi priamo v ovládacom paneli robota (viď Obrázok 1). Cieľ,
-ku ktorému sa robot presúva, sa nastaví tlačidlom (Pri mapovaní je to tlačidlo „Mapovanie“ a pri 
-prechádzaní mapy je to tlačidlo „Ďalší bod“). 
+V prvej časti bolo potrebné naprogramovať odometriu robota a základný pohyb k nastavenému cieľu. 
+Pôvodne sme v kóde využívali odometriu z koliesok robota, ale po problémoch s inými časťami zadania sme sa rozhodli pre využitie gyroskopu.
+Kód využíva dáta z enkodérov a gyroskopu robota na odhad jeho aktuálnej pozície a orientácie.
+Tieto dáta sú poskytované užívateľovi priamo v ovládacom paneli robota (viď Obrázok 1).
+Cieľ, ku ktorému sa robot presúva, sa nastaví tlačidlom (Pri mapovaní je to tlačidlo „Mapovanie“ a pri prechádzaní mapy je to tlačidlo „Ďalší bod“). 
 
 ![image](https://github.com/user-attachments/assets/1cf938ca-d955-4c71-9484-fa72ba9fd143)
 
