@@ -8,7 +8,7 @@ Kód využíva dáta z enkodérov a gyroskopu robota na odhad jeho aktuálnej po
 
 Tieto dáta sú poskytované užívateľovi priamo v ovládacom paneli robota (viď Obrázok 1). Cieľ, ku ktorému sa robot presúva, sa nastaví tlačidlom (Pri mapovaní je to tlačidlo „Mapovanie“ a pri prechádzaní mapy je to tlačidlo „Ďalší bod“). [cite: 4]
 
-<img src="./obrazok_1.png" alt="Ovládací panel robota" width="600">
+![image](https://github.com/user-attachments/assets/1cf938ca-d955-4c71-9484-fa72ba9fd143)
 
 *Obr. 1. Tlačidlá na ovládanie a zobrazenie dát o polohe robota* [cite: 5]
 
