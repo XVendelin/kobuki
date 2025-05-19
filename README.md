@@ -10,9 +10,7 @@ Tieto dáta sú poskytované užívateľovi priamo v ovládacom paneli robota (v
 
 ![image](https://github.com/user-attachments/assets/1cf938ca-d955-4c71-9484-fa72ba9fd143)
 
-<div style="margin-left: 60px;"> *Obr. 1. Tlačidlá na ovládanie a zobrazenie dát o polohe robota* [cite: 5]
-</div>
-
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*Obr. 1. Tlačidlá na ovládanie a zobrazenie dát o polohe robota* [cite: 5]
 ## Metódy
 
 ### `void robot::moveToGoal(double goal_x, double goal_y)`
