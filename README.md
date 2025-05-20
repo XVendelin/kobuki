@@ -187,33 +187,33 @@ este nekontrolovane
 
 # ČASť 4. PLÁNOVANIE CESTY
 
-Táto časť kódu implementuje algoritmy pre plánovanie cesty robota v mape.
+v 4. časti sa implementuje algoritmus pre plánovanie cesty robota v mape. Využívame záplavový algoritmus a následne po zaplavení mapy vytvárame cesty potažmo body do ktorých sa robot musí dostať. Následné prejdenie zo štartovacieho bodu `0;0` do bodu určenia. Body sa vypočítajú stlačením tlačidla "Výpočet bodov prechodu" a mapa sa prechádza stláčaním tlačidla "Ďalší bod". Aktuálny bod do ktorého sa robot presúva sa vypíše do konzoly.  
 
 ## Metódy
 
 ### `std::vector<std::vector<int>> robot::gradualFill(std::vector<std::vector<int>> map, Point start, Point goal)`
 
-Táto funkcia implementuje algoritmus "postupného vyplňovania" (pravdepodobne variant Breadth-First Search - BFS), ktorý vypĺňa mapu hodnotami predstavujúcimi vzdialenosť od cieľového bodu. Tým sa vytvorí gradient, po ktorom môže algoritmus hľadania cesty nasledovať.
+Táto funkcia implementuje záplavový algoritmus, ktorý vypĺňa mapu hodnotami predstavujúcimi vzdialenosť od cieľového bodu. Tým sa vytvorí gradient, po ktorom môže algoritmus hľadania cesty nasledovať. Poznámka ako štartovací bod pre gradualFill je v podstate cieľový bod, pretože mapu začíname zaplavovať od cieľa.
 
 * **Inicializácia:**
-    * `q`: Fronta (`std::queue`) pre BFS algoritmus, inicializovaná štartovým bodom.
+    * `q`: queue pre záplavový algoritmus, inicializovaná štartovým bodom.
     * `currentValue`: Hodnota, ktorá sa bude postupne priraďovať bunkám mapy, začína na 3.
     * `WIDTH`, `HEIGHT`: Rozmery mapy.
     * `dx`, `dy`: Polia pre smery pohybu (hore, doprava, dole, doľava).
-* **BFS slučka:**
-    * Kým fronta nie je prázdna:
+* **Slučka pre záplavový algoritmus:**
+    * Kým queue `q` nie je prázdna:
         * Pre každú bunku na aktuálnej úrovni:
             * Vyberie sa aktuálna bunka z fronty.
             * **Kontrola susedov:** Pre každého zo 4 susedov (pomocou `dx`, `dy`):
                 * Ak je sused mimo mapy, preskočí sa.
-                * Ak je susedom cieľový bod (`map[nx][ny] == -1` - poznámka: v implementácii je tu `goal` pravdepodobne označený ako -1, zatiaľ čo `start` je -1 v `volaj_findpath`), ciele sú pridané do `checkpoints` a funkcia sa okamžite vráti (cesta nájdená).
+                * Ak je susedom cieľový bod (`map[nx][ny] == -1`), cieľ je pridaný do `checkpoints` - (cesta nájdená).
                 * Ak je susedom voľné miesto (`map[nx][ny] == 0`), priradí sa mu `currentValue`, pridá sa do fronty a pokračuje sa vo vyhľadávaní.
-* **Checkpoints:** `checkpoints.push_back(q.back());` zaznamenáva posledný bod každej úrovne BFS ako checkpoint, čo by mohlo byť využité pre neskoršie plánovanie cesty.
+* **Checkpoints:** `checkpoints.push_back(q.back());` zaznamenáva posledný bod každej úrovne záplavového algoritmu ako checkpoint, čo sa využíva pre plánovanie cesty.
 * Hodnota `currentValue` sa inkrementuje po každej spracovanej úrovni.
 
 ### `std::vector<Point> robot::findpath(const std::vector<std::vector<int>>& matrix, Point start, Point end)`
 
-Táto funkcia rekonštruuje cestu z vyplnenej mapy (`matrix`) z cieľového bodu (`end`) späť k štartovému bodu (`start`). Predpokladá, že `matrix` bola vyplnená funkciou `gradualFill`, takže každá bunka obsahuje hodnotu "vzdialenosti" od cieľa.
+Táto funkcia rekonštruuje cestu z vyplnenej mapy (`matrix`) z cieľového bodu (`end`) späť k štartovému bodu (`start`). V `matrix` sa nachádza vyplnená mapa so vzdialenosťami od cieľa.
 
 * **Inicializácia:**
     * `positions`: Vektor pre ukladanie bodov nájdenej cesty.
@@ -227,27 +227,36 @@ Táto funkcia rekonštruuje cestu z vyplnenej mapy (`matrix`) z cieľového bodu
         * Vypočítajú sa súradnice susednej bunky (`newX`, `newY`).
         * Ak je sused v rámci mapy:
             * Načíta sa hodnota suseda (`neighborValue`).
-            * Ak je sused prekážkou (`-1` alebo `1`) alebo nulou (`0`), priradí sa mu veľmi vysoká hodnota (`minValue + 1`), aby sa zabránilo výberu.
+            * Ak je sused prekážkou (`1` alebo `-1`) alebo nulou (`0`), priradí sa mu veľmi vysoká hodnota (`minValue + 1`), aby sa zabránilo výberu.
             * Ak je hodnota suseda menšia ako `minValue` (čo znamená, že je bližšie k cieľu v gradiente vyplnenej mapy), táto bunka sa stane `bestMove` a jej hodnota sa stane `minValue`.
     * Aktuálny bod (`current`) sa aktualizuje na `bestMove` a `bestMove` sa pridá do `positions`.
 
 ### `std::vector<Point> robot::r_checkpoint(const std::vector<Point>& points)`
 
-Táto funkcia zoberie sekvenciu bodov a zredukuje ju na "kontrolné body" (checkpoints), ktoré reprezentujú zmeny smeru v trajektórii.
+Táto funkcia zoberie sekvenciu bodov a zredukuje ju na "body prechodu" (checkpoints), ktoré reprezentujú zmeny smeru v trajektórii.
 
 * **Logika:** Iteruje sa cez body cesty. Ak sa zmení smer medzi aktuálnym bodom a predchádzajúcim bodom, aktuálny bod sa pridá do `checkpoints`.
 * Posledný bod pôvodnej cesty sa vždy pridá do `checkpoints`.
 
 ### `std::vector<Point> robot::volaj_findpath(Point start, Point goal)`
 
-Táto funkcia slúži ako externé rozhranie pre volanie algoritmu hľadania cesty.
+Táto funkcia slúži na externé volanie volanie všetkých častí algoritmu hľadania cesty. Vracia body ,ktorými má robot prejsť. V mainwindow.cpp sa body štart a cieľ konvertujú
+z reálnych rozmerov v metroch na súradnice mapy. Po zísakní bodov prechodu, musíme vykonať opačný proces, čiže zo súradníc mapy do súradníc reálneho sveta. Následne stláčaním tlačidla "Ďalši bod" sa dokáže robot presunúť do cieľa po získaných bodoch.
+
+![image](https://github.com/user-attachments/assets/967f6e5e-079f-4c09-9506-26488d579a9b)
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*Obr. XX. konverzia štartu a cieľa na súranice mapy* 
+
+![image](https://github.com/user-attachments/assets/664b1485-2537-402f-b620-193e99f4ebba)
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*Obr. XX. konverzia bod po bode prechodu na reálne jednotky* 
 
 * **Nastavenie štartu a cieľa:**
     * Štartový bod (`start`) sa v mape `map_na_fill` označí ako `-1`.
     * Cieľový bod (`goal`) sa v mape `map_na_fill` označí ako `2`.
-* **Vyplnenie mapy:** Volá sa `gradualFill` na vyplnenie mapy hodnotami vzdialenosti od cieľa, pričom `goal` je štart pre vyplňovanie a `start` je cieľ.
+* **Vyplnenie mapy:** Volá sa `gradualFill` na vyplnenie mapy
 * **Uloženie vyplnenej mapy:** Vyplnená mapa sa uloží do súboru "mapa_fill.txt".
-* **Nájdete cestu:** Volá sa `findpath` na nájdenie cesty z `start` do `goal` vo vyplnenej mape.
-* **Redukcia na kontrolné body:** Nájdenej ceste sa aplikuje funkcia `r_checkpoint` na jej zjednodušenie na kľúčové kontrolné body.
-* Výsledné kontrolné body sa vrátia.
+* **Nájdete cestu:** Volá sa `findpath` na nájdenie cesty.
+* **Redukcia na body prechodu:** Na nájdenú cestu sa aplikuje `r_checkpoint`, ktorý ju zjednoduší na body prechodu.
+* Výsledné kontrolné body sa vracajú.
 /*************************************************************************************************************************************************************************************************************************************************************************/
