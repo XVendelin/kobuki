@@ -99,9 +99,46 @@ Ak je nastavený `movingToGoal`, vykonáva sa nasledujúca logika pre navigáciu
 .
 .
 .
-/*************************************************************************************************************************************************************************************************************************************************************************/
-Nutné doplnenie
-/*************************************************************************************************************************************************************************************************************************************************************************/
+# ČASŤ 2. VYHÝBANIE SA PREKÁŽKAM (Vyhýbanie prekážkam)
+
+V 2. časti sme implementovali logiku na vyhýbanie sa prekážkam pomocou dát z lidaru a prispôsobuje pohyb robota k cieľu na základe detegovaných prekážok. Táto časť používa ešte starú odometriu z koliesok. Naša 2. časť funguje len simulačne na reálnom robote nefungovala.
+
+## Metódy
+
+### `void robot::obstacleAvoidance(double max_ot, double min_ot, double max_s, double min_s)`
+
+Táto metóda je zodpovedná za riadenie pohybu robota k cieľu, pričom aktívne reaguje na prekážky v jeho okolí. Prijíma parametre pre maximálne a minimálne otáčavé a lineárne rýchlosti. Pri najdení prekážky sa prepne na vlastnú logiku pohybu vlastné zrýchlovanie spomaľovanie atď ktoré je rovnaké ako v 1. Časti (rozdiel je len stará odometria z koliečok).
+
+* **Vytvorenie polárneho histogramu prekážok:**
+    * Definuje sa `num_sectors = 36` (každý sektor reprezentuje 10 stupňov).
+    * `sector_occupancy`: Vektor na ukladanie "obsadenosti" každého sektora.
+    * `obstacle_distance_threshold = 2.0`: Maximálna vzdialenosť (v metroch), do ktorej sa prekážky berú do úvahy.
+    * Cyklus prechádza cez všetky skenované údaje z lidaru (`copyOfLaserData`):
+        * Načíta sa uhol a vzdialenosť bodu (`dist_meters` sa konvertuje z mm na metre).
+        * Ak je bod v relevantnej vzdialenosti (`0.05m` až `2.0m`):
+            * Uhol sa normalizuje do rozsahu `[0, 360)`.
+            * Vypočíta sa index sektora.
+            * `sector_occupancy[sector_idx]` sa inkrementuje o hodnotu, ktorá rastie, čím je prekážka bližšie (`obstacle_distance_threshold - dist_meters`).
+    * **Váhovanie sektorov:**
+        * Zisťuje sa či sú sektory voľné alebo nie pomocou váhovaných hodnôt.
+        * Definuje sa prah obsadenosti `occupancy_threshold = 12`.
+        * Sektory s obsadenosťou pod `occupancy_threshold - 10` sú označené ako voľné (`0`).
+        * Sektory s obsadenosťou nad `occupancy_threshold` sú označené ako obsadené (`1`).
+        * Sektory v prechodnej zóne (`occupancy_threshold - 10` až `occupancy_threshold`) si zachovávajú hodnotu z predchádzajúcej iterácie (`occupancy_copy`), čo pomáha tlmiť prudké zmeny v detekcii prekážok.
+
+* **Detekcia prekážok pred cieľom a hľadanie voľného sektora:**
+    * `goal_angle`: Cieľový uhol (v stupňoch) vzhľadom na orientáciu robota, normalizovaný do rozsahu `[0, 360)`.
+    * `g_a`: Index sektora, v ktorom sa nachádza cieľový uhol.
+    * Skontroluje sa, či je prekážka v oblasti `sectors_to_check = 5` sektorov okolo cieľového sektora.
+    * **Ak je prekážka v ceste:**
+        * Vyhľadávajú sa "medzery" (sekvencie voľných sektorov, teda s hodnotou `0`) v polárnom histograme.
+        * Kandidátske sektory pre nový smer sú stredy alebo okraje týchto medzier.
+        * Ak nie je cieľový smer zablokovaný, pridá sa aj cieľový sektor medzi kandidátov.
+        * Spomedzi kandidátov sa vyberie ten, ktorý je najbližšie k pôvodnému cieľovému sektoru.
+        * `errorAngle` a `angular_speed` sa prepočítajú na základe nového, upraveného cieľového uhla, ktorý smeruje cez voľný sektor.
+
+* **Logika pohybu:**
+logika pohybu je rovnaká ako v predchádzajúcej časti. Body sa nastavujú pmocou tlačidiel. 2. Časť sme mali oddelenú od 3. a 4. a preto sme mali aj inak nastavené tlačidlá na zadávanie bodu kde sa má robot presunúť. Na každé tlačidlo bol iný cieľ ale veľmi jednoducho by sa to dalo spraviť na jedno tlačidlo. Napríklad tak, ako to bolo v hlavnej časti kódu, kde sa nachádzali 1., 3. a 4. časť. 
 .
 .
 .
@@ -183,13 +220,17 @@ Načíta mapu z textového súboru a vykoná na nej transformáciu, aby ju pripr
         * Pre všetky okolité bunky v rozsahu 2 sa nastavia na `1` v `expanded_map`. To znamená, že ak je prekážka v `(x,y)`, bunky v okruhu 2 buniek okolo nej sa tiež označia ako prekážky. Rozsah 2 z dôvodu že robot má polomer približne 17cm a jedna naša bunka má veľkosť 10x10 cm.
 * Konečná upravená mapa (`expanded_map`) sa uloží do `map_na_fill`. Takto sa spravil v podstate konverzia z 2D pola na vektor vektorov. Táto zmena sa udiala alebo v Časti 4. pracujeme práve s vektorom vektorov. Mapa sa následne vypíše do konzoly už v binárnej forme.
 
+![image](https://github.com/user-attachments/assets/26dd0e03-21c3-4b4d-9d79-4cd195fa30e2)
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*Obr. 2. Vykreslovanie mapy do konzoly* 
+
 ![image](https://github.com/user-attachments/assets/f2d560f9-cae0-4e9c-ad4d-684f642e2c3c)
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*Obr. XX. Mapa pred filtráciou prekážok* 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*Obr. 3. Mapa pred filtráciou prekážok* 
 
 ![image](https://github.com/user-attachments/assets/fe06886c-8c58-4d73-8af0-c37c5d4b3015)
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*Obr. XX. Odfiltrovaná upravená binárna mapa* 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*Obr. 4. Odfiltrovaná upravená binárna mapa* 
 .
 .
 .
@@ -253,11 +294,11 @@ z reálnych rozmerov v metroch na súradnice mapy. Po zísakní bodov prechodu, 
 
 ![image](https://github.com/user-attachments/assets/967f6e5e-079f-4c09-9506-26488d579a9b)
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*Obr. XX. konverzia štartu a cieľa na súranice mapy* 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*Obr. 5. konverzia štartu a cieľa na súranice mapy* 
 
 ![image](https://github.com/user-attachments/assets/664b1485-2537-402f-b620-193e99f4ebba)
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*Obr. XX. konverzia bod po bode prechodu na reálne jednotky* 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*Obr. 6. konverzia bod po bode prechodu na reálne jednotky* 
 
 * **Nastavenie štartu a cieľa:**
     * Štartový bod (`start`) sa v mape `map_na_fill` označí ako `-1`.
@@ -270,4 +311,4 @@ z reálnych rozmerov v metroch na súradnice mapy. Po zísakní bodov prechodu, 
 
 ![image](https://github.com/user-attachments/assets/f33947d9-6d0d-470a-9545-8bbb6725df01)
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*Obr. XX. Záplavový algoritmus (modrý bod- miesto kde robot začína, oranžový bod - miesto kde sa má robot dostať)* 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*Obr. 7. Záplavový algoritmus (modrý bod- miesto kde robot začína, oranžový bod - miesto kde sa má robot dostať)* 
