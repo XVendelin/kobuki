@@ -96,14 +96,15 @@ Ak je nastavený `movingToGoal`, vykonáva sa nasledujúca logika pre navigáciu
     * Ak je robot dostatočne natočený a vzdialenosť k cieľu je väčšia ako `tolerance_pos`, robot sa pohybuje lineárne k cieľu (`setSpeed(current_linear_speed, 0)`).
     * Ak je vzdialenosť k cieľu menšia alebo rovná `tolerance_pos`, robot zastaví (`setSpeed(0, 0)`), nastaví sa `movingToGoal` na `false` a resetuje sa `distance_scan`.
 * **Publikovanie pozície:** Každých 5 iterácií (`datacounter % 5 == 0`) sa emituje signál `publishPosition` s aktuálnou polohou a orientáciou robota. Toto slúži na aktualizáciu používateľského rozhrania.
-
-##   Záver
-
-Tento kód implementuje základnú odometriu pre mobilného robota s diferenciálnym pohonom, využívajúc dáta z enkodérov a gyroskopu. Zároveň obsahuje implementáciu jednoduchého kontroléra pre pohyb robota k zadanému cieľu s plynulou akceleráciou a deceleráciou.
-
+.
+.
+.
 /*************************************************************************************************************************************************************************************************************************************************************************/
 Nutné doplnenie
 /*************************************************************************************************************************************************************************************************************************************************************************/
+.
+.
+.
 # ČASŤ 3. MAPOVANIE A INTERPOLÁCIA
 
 Táto časť kódu sa zameriava na spracovanie dát z lidaru, ich interpoláciu a následné mapovanie prostredia do mapy. Mapa je realizovaná štvorcovou mriežkou (dvojrozmerné pole, to je neskôr transformované do vektora vektorov). Rozmer štvorca (bunky) je 10x10 cm. Mapa má nasledne nastavený rozmer 100x120 buniek (je to viac ako je potrebné s problematikou sa vysporiadavame vyplnením voľného miesta okolo mapy stenamy, teda 1-tkami). 
@@ -181,10 +182,9 @@ Načíta mapu z textového súboru a vykoná na nej transformáciu, aby ju pripr
     * Pre každý bod `(y, x)` v `temp_map`, ak je `1` (prekážka):
         * Pre všetky okolité bunky v rozsahu 2 sa nastavia na `1` v `expanded_map`. To znamená, že ak je prekážka v `(x,y)`, bunky v okruhu 2 buniek okolo nej sa tiež označia ako prekážky. Rozsah 2 z dôvodu že robot má polomer približne 17cm a jedna naša bunka má veľkosť 10x10 cm.
 * Konečná upravená mapa (`expanded_map`) sa uloží do `map_na_fill`. Takto sa spravil v podstate konverzia z 2D pola na vektor vektorov. Táto zmena sa udiala alebo v Časti 4. pracujeme práve s vektorom vektorov. Mapa sa následne vypíše do konzoly už v binárnej forme.
-
-/_._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._/
-este nekontrolovane
-
+.
+.
+.
 # ČASť 4. PLÁNOVANIE CESTY
 
 v 4. časti sa implementuje algoritmus pre plánovanie cesty robota v mape. Využívame záplavový algoritmus a následne po zaplavení mapy vytvárame cesty potažmo body do ktorých sa robot musí dostať. Následné prejdenie zo štartovacieho bodu `0;0` do bodu určenia. Body sa vypočítajú stlačením tlačidla "Výpočet bodov prechodu" a mapa sa prechádza stláčaním tlačidla "Ďalší bod". Aktuálny bod do ktorého sa robot presúva sa vypíše do konzoly.  
@@ -259,4 +259,3 @@ z reálnych rozmerov v metroch na súradnice mapy. Po zísakní bodov prechodu, 
 * **Nájdete cestu:** Volá sa `findpath` na nájdenie cesty.
 * **Redukcia na body prechodu:** Na nájdenú cestu sa aplikuje `r_checkpoint`, ktorý ju zjednoduší na body prechodu.
 * Výsledné kontrolné body sa vracajú.
-/*************************************************************************************************************************************************************************************************************************************************************************/
