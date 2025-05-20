@@ -100,3 +100,154 @@ Ak je nastavený `movingToGoal`, vykonáva sa nasledujúca logika pre navigáciu
 ##   Záver
 
 Tento kód implementuje základnú odometriu pre mobilného robota s diferenciálnym pohonom, využívajúc dáta z enkodérov a gyroskopu. Zároveň obsahuje implementáciu jednoduchého kontroléra pre pohyb robota k zadanému cieľu s plynulou akceleráciou a deceleráciou.
+
+/*************************************************************************************************************************************************************************************************************************************************************************/
+Nutné doplnenie
+/*************************************************************************************************************************************************************************************************************************************************************************/
+# ČASŤ 3. MAPOVANIE A INTERPOLÁCIA
+
+Táto časť kódu sa zameriava na spracovanie dát z lidaru, ich interpoláciu a následné mapovanie prostredia do mapy. Mapa je realizovaná štvorcovou mriežkou (dvojrozmerné pole, to je neskôr transformované do vektora vektorov). Rozmer štvorca (bunky) je 10x10 cm. Mapa má nasledne nastavený rozmer 100x120 buniek (je to viac ako je potrebné s problematikou sa vysporiadavame vyplnením voľného miesta okolo mapy stenamy, teda 1-tkami). 
+
+Ovládanie je nasledovné. V mainwindow.cpp máme nastavené body, ktorými má robot prejsť. Stláčaním tlačidla "Mapovanie" zadávame robotu novú pozíciu, kam sa má vydať a popri tom si tvorí mapu (zatiaľ sám pre seba). Po dosiahnutí bodu je nutné opätovne stlačiť tlačidlo "Mapovanie" na zadanie ďalšieho bodu. Priebežne si môžeme stĺačať tlačidlo "Vykreslenie Mapy", ktorým si už načítanú časť nielen vypíšeme do konzoly, ale si ju rovno aj uložíme do súboru.
+
+Ak bol priestor už zmapovaný a nachádza sa vo forme mapy v súbore, tak môžeme stlačiť tlačidlo "Záplavový Algoritmus", ktoré nám načíta mapu transformuje ju do binárnej podoby. A tak bude pripravená na použitie práve už spomínaného záplavového algoritmu.
+
+## Metódy
+
+### `int robot::processThisLidar(LaserMeasurement laserData)`
+
+Táto metóda je callback funkcia, ktorá sa volá vždy, keď sú prijaté nové dáta z lidaru. Jej hlavnou úlohou je spracovať tieto dáta a zaznamenať zistené prekážky do mapy.
+
+* **Kopírovanie dát:** Dáta z `laserData` sa skopírujú do `copyOfLaserData`, aby sa predišlo prepísaniu počas spracovania.
+* **Iterácia cez skeny lidaru:** Pre každý jednotlivý sken z lidaru (`copyOfLaserData.numberOfScans`):
+    * **Výpočet uhla a vzdialenosti:** Načíta sa uhol (`uhol_lid`) a vzdialenosť (`vzdialenost_lid`) jednotlivého bodu z lidaru. Vzdialenosť sa konvertuje z centimetrov na metre.
+    * **Normalizácia uhla lidaru:** Uhol lidaru sa normalizuje do rozsahu `[-180, 180]` stupňov.
+    * **Filtrovanie dát:** Sú spracované len body, ktorých vzdialenosť spadá do určených rozsahov (`(vzdialenost_lid > 2 && vzdialenost_lid < 5) || (vzdialenost_lid > 7 && vzdialenost_lid < 30)`). Teda od 20 cm po 50 cm a od 70 cm po 300 cm. Je to spravené z dôvodu, že lidar na reálnom robote by nám vnášal do mapy chybné dáta. 
+    * **Interpolácia pozície robota:** Na základe časovej pečiatky (`timestamp_lidar`) sa interpoluje presná pozícia (`interpolated_x`, `interpolated_y`) a orientácia (`interpolated_angle`) robota v čase merania lidaru. To je kľúčové pre presné mapovanie, pretože lidar meria asynchrónne s pohybom robota.
+    * **Normalizácia interpolovaného uhla:** Interpolovaný uhol robota sa normalizuje do rozsahu `[-180, 180]` stupňov.
+    * **Výpočet globálneho uhla bodu:** Globálny uhol sa vypočíta súčtom interpolovaného uhla robotu a uhla lidaru. Následne sa uhol normalizuje a konvertuje na radiány. Chýba tu síce ošetrenie kedy sa uhol interpoluje cez hranicu 180° a -180. To môže zavádzať šum do mapy. 
+    * **Prepočet na súradnice mapy:** Súradnice prekážky (`mapX`, `mapY`) sa vypočítajú z interpolovanej pozície robota, vzdialenosti a globálneho uhla. Tieto súradnice sa následne pretypujú z float na integer a vykoná sa odsadenie počiatku v mriežke (`mapX_int`, `mapY_int`). odsadenie je `+10` (stĺpec) a `+50` (riadky).
+    * **Kontrola rozmerov mapy:** Samozrejme je nutné hodnoty skontrolovať a zistiť či sa nachádzajú v mape (či sú v rámci hraníc mapy).
+    * **Zápis do mapy:** Ak robot nerotuje (`rotacia == 0`), hodnota príslušnej bunky v 2D poli `Mapa` sa inkrementuje (`Mapa[mapY_int][mapX_int] += 1`). Ide o realizáciu váhovania prekážok. Ak lidar robota zaznamená prekážku pripíše danej bunke hodnotu. Čím viac krát je daná prekážka detegovaná tým je väčšia hodnota následne bude v dokumentácií spomenutá funkcia ktorá bude slúžiť ako filter podľa váh.
+    * **Zaznamenanie počiatku:** Ak sú interpolované súradnice robota (0,0), bunka sa nastaví na 2, ide o naznačenie štartovacieho bodu robota ktoré slúžilo len na debugovanie a bude ofiltrovaná.
+
+### `std::array<double, 3> robot::interpol(uint32_t Lid_TS)`
+
+Táto funkcia vykonáva lineárnu interpoláciu pozície a orientácie robota na základe timestamp lidaru. Cieľom je určiť presnú polohu robota v momente, keď lidar zaznamenal konkrétne meranie.
+
+* **Kontrola dostatočnosti dát:** Funkcia najprv skontroluje, či sú k dispozícii aspoň dve merania odometrie (v `Robot_TS`, `x_TS`, `y_TS`, `fi_TS`) na vykonanie interpolácie. Ak nie, vráti poslednú známu interpolovanú pozíciu (`interpol_X_backup`, `interpol_Y_backup`, `interpol_Fi_backup`).
+* **Prehľadávanie queue:** Iteruje cez queue timestampu (`Robot_TS`) a zodpovedajúce pozície a orientáciu (`x_TS`, `y_TS`, `fi_TS`). Hľadá dvojicu timestampov (`Robot_1_TS`, `Robot_2_TS`), medzi ktorými leží timestamp lidaru (`Lid_TS`).
+* **Výpočet interpolovaných hodnôt:** Ak sa nájde vhodná dvojica, vykoná sa lineárna interpolácia pre `x`, `y` a `fi`. Vzorec používa pomer časového rozdielu (`T_timestamp / T`) pre daný interval. Hodnoty `x` a `y` sa vynásobia 10 aby sa zabezpečila konverzia z metrov na decimetre.
+* **Aktualizácia záloh x,y,fi:** Výsledné interpolované hodnoty sa uložia do záložných premenných (`interpol_X_backup`, `interpol_Y_backup`, `interpol_Fi_backup`) pre prípad, že by nebol dostatok dát na interpoláciu.
+* **Vyhadzovanie starých a načítanie nových hodnôt z queue:** Po úspešnej interpolácii sa z frontov odoberú staršie hodnoty, aby sa zachovala ich veľkosť a relevancia.
+
+### `void robot::vypisMapy()`
+
+Ide o pomocnú funkciu, ktorá slúži na vizuálny výpis aktuálneho stavu mapy do konzoly.
+
+* Funkcia prechádza cez 2D `Mapa`.
+* Bunky s hodnotou menšou ako 10 toto je filter váh ktorý sme spomýnali vyššie. To sa zobrazí ako dve medzery ("  ").
+* Bunky s hodnotou 2 počiatočná sa zobrazí ako `+`.
+* Ostatné bunky (prekážky) sa zobrazia ako `.`.
+
+### `void robot::saveMapToFile(const std::string &filename)`
+
+Ukladá surovú (nefiltrovanú) mapu `Mapa` do textového súboru.
+
+* Otvorí súbor pre zápis. Ak sa súbor nepodarí otvoriť, vypíše chybu.
+* Prechádza všetky bunky mapy a zapíše ich hodnoty oddelené medzerou.
+* Po každom riadku vloží nový riadok.
+* Po zapísaní zatvorí súbor.
+
+### `void robot::saveFilledMap(const std::string &filename)`
+
+Ukladá upravenú mapu (v tomto prípade vektor vektorov) `map_na_fill` (je výsledkom spracovania z `openSavedMap`) do textového súboru. Funguje v princípe rovnako ako `saveMapToFile`.
+
+### `void robot::openSavedMap(const std::string &filename)`
+
+Načíta mapu z textového súboru a vykoná na nej transformáciu, aby ju pripravila pre algoritmy hľadania cesty (záplavový algoritmus).
+
+* **Načítanie a binarizácia:**
+    * Otvorí súbor a prečíta ho riadok po riadku.
+    * Každá hodnota v riadku sa prečíta a **binarizuje**: Ak je hodnota `>= 10`, zapíše sa ako `1` (čiže prekážka), inak `0` (voľný priestor).
+    * Binarizovaná mapa sa uloží do `temp_map` (vektor vektorov).
+* **Spracovanie zľava a sprava (vyplňovanie nepotreného priestoru 1-tkami):**
+    * Ide o vyplnenie prázdneho nepotrebného priestoru za "stenou", čím sa vytvorí súvislejší obraz stien.
+    * Mapa je prechádzaná:
+        * **Sprava:** Hľadá sa prvá `1` (prekážka) od pravého okraja. Všetky `0` pred touto `1` (smerom doprava) sa zmenia na `1`.
+        * **Zľava:** Hľadá sa prvá `1` (prekážka) od ľavého okraja. Všetky `0` pred touto `1` (smerom doľava) sa zmenia na `1`.
+* **Rozšírenie jednotiek do okolia (dilatácia):**
+    * Cieľom je rozšíriť detegované prekážky (hodnoty `1`) do ich okolia. Toto je dôležité pre vytvorenie "bezpečnostnej zóny" okolo prekážok, aby sa robot do nich nenarážal.
+    * Pre každý bod `(y, x)` v `temp_map`, ak je `1` (prekážka):
+        * Pre všetky okolité bunky v rozsahu 2 sa nastavia na `1` v `expanded_map`. To znamená, že ak je prekážka v `(x,y)`, bunky v okruhu 2 buniek okolo nej sa tiež označia ako prekážky. Rozsah 2 z dôvodu že robot má polomer približne 17cm a jedna naša bunka má veľkosť 10x10 cm.
+* Konečná upravená mapa (`expanded_map`) sa uloží do `map_na_fill`. Takto sa spravil v podstate konverzia z 2D pola na vektor vektorov. Táto zmena sa udiala alebo v Časti 4. pracujeme práve s vektorom vektorov. Mapa sa následne vypíše do konzoly už v binárnej forme.
+
+/_._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._/
+este nekontrolovane
+
+# ČASť 4. PLÁNOVANIE CESTY
+
+Táto časť kódu implementuje algoritmy pre plánovanie cesty robota v mape.
+
+## Metódy
+
+### `std::vector<std::vector<int>> robot::gradualFill(std::vector<std::vector<int>> map, Point start, Point goal)`
+
+Táto funkcia implementuje algoritmus "postupného vyplňovania" (pravdepodobne variant Breadth-First Search - BFS), ktorý vypĺňa mapu hodnotami predstavujúcimi vzdialenosť od cieľového bodu. Tým sa vytvorí gradient, po ktorom môže algoritmus hľadania cesty nasledovať.
+
+* **Inicializácia:**
+    * `q`: Fronta (`std::queue`) pre BFS algoritmus, inicializovaná štartovým bodom.
+    * `currentValue`: Hodnota, ktorá sa bude postupne priraďovať bunkám mapy, začína na 3.
+    * `WIDTH`, `HEIGHT`: Rozmery mapy.
+    * `dx`, `dy`: Polia pre smery pohybu (hore, doprava, dole, doľava).
+* **BFS slučka:**
+    * Kým fronta nie je prázdna:
+        * Pre každú bunku na aktuálnej úrovni:
+            * Vyberie sa aktuálna bunka z fronty.
+            * **Kontrola susedov:** Pre každého zo 4 susedov (pomocou `dx`, `dy`):
+                * Ak je sused mimo mapy, preskočí sa.
+                * Ak je susedom cieľový bod (`map[nx][ny] == -1` - poznámka: v implementácii je tu `goal` pravdepodobne označený ako -1, zatiaľ čo `start` je -1 v `volaj_findpath`), ciele sú pridané do `checkpoints` a funkcia sa okamžite vráti (cesta nájdená).
+                * Ak je susedom voľné miesto (`map[nx][ny] == 0`), priradí sa mu `currentValue`, pridá sa do fronty a pokračuje sa vo vyhľadávaní.
+* **Checkpoints:** `checkpoints.push_back(q.back());` zaznamenáva posledný bod každej úrovne BFS ako checkpoint, čo by mohlo byť využité pre neskoršie plánovanie cesty.
+* Hodnota `currentValue` sa inkrementuje po každej spracovanej úrovni.
+
+### `std::vector<Point> robot::findpath(const std::vector<std::vector<int>>& matrix, Point start, Point end)`
+
+Táto funkcia rekonštruuje cestu z vyplnenej mapy (`matrix`) z cieľového bodu (`end`) späť k štartovému bodu (`start`). Predpokladá, že `matrix` bola vyplnená funkciou `gradualFill`, takže každá bunka obsahuje hodnotu "vzdialenosti" od cieľa.
+
+* **Inicializácia:**
+    * `positions`: Vektor pre ukladanie bodov nájdenej cesty.
+    * `current`: Aktuálny bod na ceste, inicializovaný štartovým bodom.
+    * `directions`: Možné smery pohybu (ľavá, pravá, hore, dole).
+    * `bestMove`: Najlepší ďalší krok na ceste.
+    * `minValue`: Minimálna hodnota, ktorá sa má hľadať v susedných bunkách (inicializovaná na maximálnu možnú hodnotu).
+* **Prehľadávanie cesty:**
+    * Slučka beží, kým sa aktuálny bod nerovná cieľovému bodu.
+    * Pre každý smer (`dir`):
+        * Vypočítajú sa súradnice susednej bunky (`newX`, `newY`).
+        * Ak je sused v rámci mapy:
+            * Načíta sa hodnota suseda (`neighborValue`).
+            * Ak je sused prekážkou (`-1` alebo `1`) alebo nulou (`0`), priradí sa mu veľmi vysoká hodnota (`minValue + 1`), aby sa zabránilo výberu.
+            * Ak je hodnota suseda menšia ako `minValue` (čo znamená, že je bližšie k cieľu v gradiente vyplnenej mapy), táto bunka sa stane `bestMove` a jej hodnota sa stane `minValue`.
+    * Aktuálny bod (`current`) sa aktualizuje na `bestMove` a `bestMove` sa pridá do `positions`.
+
+### `std::vector<Point> robot::r_checkpoint(const std::vector<Point>& points)`
+
+Táto funkcia zoberie sekvenciu bodov a zredukuje ju na "kontrolné body" (checkpoints), ktoré reprezentujú zmeny smeru v trajektórii.
+
+* **Logika:** Iteruje sa cez body cesty. Ak sa zmení smer medzi aktuálnym bodom a predchádzajúcim bodom, aktuálny bod sa pridá do `checkpoints`.
+* Posledný bod pôvodnej cesty sa vždy pridá do `checkpoints`.
+
+### `std::vector<Point> robot::volaj_findpath(Point start, Point goal)`
+
+Táto funkcia slúži ako externé rozhranie pre volanie algoritmu hľadania cesty.
+
+* **Nastavenie štartu a cieľa:**
+    * Štartový bod (`start`) sa v mape `map_na_fill` označí ako `-1`.
+    * Cieľový bod (`goal`) sa v mape `map_na_fill` označí ako `2`.
+* **Vyplnenie mapy:** Volá sa `gradualFill` na vyplnenie mapy hodnotami vzdialenosti od cieľa, pričom `goal` je štart pre vyplňovanie a `start` je cieľ.
+* **Uloženie vyplnenej mapy:** Vyplnená mapa sa uloží do súboru "mapa_fill.txt".
+* **Nájdete cestu:** Volá sa `findpath` na nájdenie cesty z `start` do `goal` vo vyplnenej mape.
+* **Redukcia na kontrolné body:** Nájdenej ceste sa aplikuje funkcia `r_checkpoint` na jej zjednodušenie na kľúčové kontrolné body.
+* Výsledné kontrolné body sa vrátia.
+/*************************************************************************************************************************************************************************************************************************************************************************/
