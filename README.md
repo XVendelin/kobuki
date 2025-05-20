@@ -182,6 +182,14 @@ Načíta mapu z textového súboru a vykoná na nej transformáciu, aby ju pripr
     * Pre každý bod `(y, x)` v `temp_map`, ak je `1` (prekážka):
         * Pre všetky okolité bunky v rozsahu 2 sa nastavia na `1` v `expanded_map`. To znamená, že ak je prekážka v `(x,y)`, bunky v okruhu 2 buniek okolo nej sa tiež označia ako prekážky. Rozsah 2 z dôvodu že robot má polomer približne 17cm a jedna naša bunka má veľkosť 10x10 cm.
 * Konečná upravená mapa (`expanded_map`) sa uloží do `map_na_fill`. Takto sa spravil v podstate konverzia z 2D pola na vektor vektorov. Táto zmena sa udiala alebo v Časti 4. pracujeme práve s vektorom vektorov. Mapa sa následne vypíše do konzoly už v binárnej forme.
+
+![image](https://github.com/user-attachments/assets/f2d560f9-cae0-4e9c-ad4d-684f642e2c3c)
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*Obr. XX. Mapa pred filtráciou prekážok* 
+
+![image](https://github.com/user-attachments/assets/fe06886c-8c58-4d73-8af0-c37c5d4b3015)
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*Obr. XX. Odfiltrovaná upravená binárna mapa* 
 .
 .
 .
@@ -259,3 +267,7 @@ z reálnych rozmerov v metroch na súradnice mapy. Po zísakní bodov prechodu, 
 * **Nájdete cestu:** Volá sa `findpath` na nájdenie cesty.
 * **Redukcia na body prechodu:** Na nájdenú cestu sa aplikuje `r_checkpoint`, ktorý ju zjednoduší na body prechodu.
 * Výsledné kontrolné body sa vracajú.
+
+![image](https://github.com/user-attachments/assets/f33947d9-6d0d-470a-9545-8bbb6725df01)
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*Obr. XX. Záplavový algoritmus (modrý bod- miesto kde robot začína, oranžový bod - miesto kde sa má robot dostať)* 
